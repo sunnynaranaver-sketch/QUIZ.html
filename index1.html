@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>줍깅 챌린지: 뱃지를 모아라!</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body { font-family: 'Pretendard', sans-serif; text-align: center; padding: 20px; background-color: #f8fafc; color: #334155; }
+        .quiz-container { background: white; padding: 40px 20px; border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
+        
+        /* 메달 스타일 */
+        .badge-box { display: flex; justify-content: center; gap: 12px; margin-bottom: 30px; background: #f1f5f9; padding: 15px; border-radius: 15px; }
+        .badge { width: 55px; height: 55px; filter: grayscale(1) opacity(0.3); transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .badge.active { filter: grayscale(0) opacity(1); transform: scale(1.2); drop-shadow: 0 10px 10px rgba(0,0,0,0.1); }
+        
+        .question-box { font-size: 1.4rem; font-weight: 700; line-height: 1.5; margin-bottom: 30px; min-height: 80px; color: #1e293b; }
+        
+        .btn-group { display: flex; justify-content: center; gap: 20px; }
+        .btn { width: 100px; height: 100px; font-size: 40px; font-weight: bold; cursor: pointer; border: none; border-radius: 50%; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-o { background-color: #22c55e; color: white; }
+        .btn-x { background-color: #ef4444; color: white; }
+        .btn:active { transform: scale(0.9); }
+        
+        .result-msg { font-weight: bold; margin-top: 25px; font-size: 1.3rem; min-height: 30px; }
+        .explanation { background: #f0f9ff; padding: 20px; border-radius: 12px; margin-top: 20px; border-left: 5px solid #3b82f6; text-align: left; display: none; line-height: 1.6; }
+        #final-screen { display: none; }
+        h1 { color: #0f172a; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <div id="quiz-screen">
+        <h2 id="quiz-title" style="color: #64748b; font-size: 1rem; margin-bottom: 10px;">줍깅 챌린지 퀴즈</h2>
+        <div class="badge-box">
+            <img src="https://cdn-icons-png.flaticon.com/512/5968/5968923.png" class="badge" id="b1">
+            <img src="https://cdn-icons-png.flaticon.com/512/5968/5968923.png" class="badge" id="b2">
+            <img src="https://cdn-icons-png.flaticon.com/512/5968/5968923.png" class="badge" id="b3">
+            <img src="https://cdn-icons-png.flaticon.com/512/5968/5968923.png" class="badge" id="b4">
+            <img src="https://cdn-icons-png.flaticon.com/512/5968/5968923.png" class="badge" id="b5">
+        </div>
+        
+        <div id="question-text" class="question-box">문제를 불러오는 중...</div>
+        
+        <div class="btn-group">
+            <button class="btn btn-o" onclick="checkAnswer('O')">O</button>
+            <button class="btn btn-x" onclick="checkAnswer('X')">X</button>
+        </div>
+        
+        <div id="feedback" class="result-msg"></div>
+        <div id="explanation" class="explanation"></div>
+    </div>
+
+    <div id="final-screen">
+        <div style="font-size: 80px;">🏆</div>
+        <h1>챌린지 완료!</h1>
+        <p style="font-size: 1.3rem; margin: 20px 0;">총 <span id="final-count" style="color:#3b82f6; font-weight:bold;">0</span>개의 메달을 획득했습니다!</p>
+        <p>환경을 지키는 소중한 발걸음,<br>정말 고생 많으셨습니다! 👏</p>
+        <button onclick="location.href='?quiz=1'" style="margin-top:20px; padding:10px 20px; border-radius:8px; border:1px solid #cbd5e1; background:white; cursor:pointer;">처음부터 다시하기</button>
+    </div>
+</div>
+
+<script>
+    const quizzes = {
+        1: { q: "우리나라 분리배출 표시 마크는 9가지이다.", a: "O", desc: "정답입니다! 무색PET, 플라스틱, 비닐, 종이, 일반팩, 멸균팩, 유리, 캔류, 재활용 안됨 표시가 있습니다." },
+        2: { q: "우유팩은 종이류로 분리배출한다.", a: "O", desc: "정답입니다! 우유팩은 일반팩으로 종이와 분리하여 배출해야 휴지로 재활용할 수 있습니다." },
+        3: { q: "영수증은 종이류로 분리배출해야 한다.", a: "X", desc: "정답입니다! 영수증은 감열지(혼합재질)라 재활용이 안 되어 일반 쓰레기로 버려야 합니다." },
+        4: { q: "배달 음식 용기에 묻은 음식물은 씻어서 내놓아야 한다.", a: "O", desc: "정답입니다! 이물질이 묻으면 재활용 품질이 떨어지거나 불가능하므로 비우고 헹궈야 합니다." },
+        5: { q: "깨진 유리는 유리류로 분리배출한다.", a: "X", desc: "정답입니다! 깨진 유리는 재활용 공정에서 위험하고 섞일 수 없어 전용 마대나 신문지에 싸서 일반 쓰레기로 버려야 합니다." }
+    };
+
+    let earnedBadges = JSON.parse(localStorage.getItem('myBadges')) || [];
+    const urlParams = new URLSearchParams(window.location.search);
+    const quizId = parseInt(urlParams.get('quiz'));
+
+    if(quizId && quizzes[quizId]) {
+        document.getElementById('quiz-title').innerText = `STEP ${quizId} 지점 퀴즈`;
+        document.getElementById('question-text').innerText = quizzes[quizId].q;
+        updateBadgeUI();
+    } else if (urlParams.get('finish')) {
+        showFinal();
+    } else {
+        // 주소에 파라미터가 없을 경우 1번으로 자동 유도
+        document.getElementById('question-text').innerText = "QR 코드를 스캔하여 퀴즈를 시작해 주세요!";
+        updateBadgeUI();
+    }
+
+    function checkAnswer(userAns) {
+        const correct = quizzes[quizId].a;
+        const feedback = document.getElementById('feedback');
+        const exp = document.getElementById('explanation');
+        
+        if(userAns === correct) {
+            feedback.innerText = "🎉 정답입니다!";
+            feedback.style.color = "#22c55e";
+            if(!earnedBadges.includes(quizId)) {
+                earnedBadges.push(quizId);
+                localStorage.setItem('myBadges', JSON.stringify(earnedBadges));
+            }
+            updateBadgeUI();
+            
+            // 정답일 때 작은 폭죽 효과
+            confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 } });
+        } else {
+            feedback.innerText = "😥 아쉬워요! 다시 생각해보세요.";
+            feedback.style.color = "#ef4444";
+        }
+        
+        exp.innerText = quizzes[quizId].desc;
+        exp.style.display = "block";
+
+        // 모든 뱃지를 다 모았다면 3초 후 완료 화면으로
+        if(earnedBadges.length === 5) {
+            setTimeout(() => { location.href = "?finish=true"; }, 3500);
+        }
+    }
+
+    function updateBadgeUI() {
+        earnedBadges.forEach(id => {
+            const el = document.getElementById(`b${id}`);
+            if(el) el.classList.add('active');
+        });
+    }
+
+    function showFinal() {
+        document.getElementById('quiz-screen').style.display = "none";
+        document.getElementById('final-screen').style.display = "block";
+        document.getElementById('final-count').innerText = earnedBadges.length;
+        
+        // 최종 팡파레 효과 (화려하게)
+        var duration = 5 * 1000;
+        var animationEnd = Date.now() + duration;
+        var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+        function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+
+        var interval = setInterval(function() {
+            var timeLeft = animationEnd - Date.now();
+            if (timeLeft <= 0) return clearInterval(interval);
+            var particleCount = 50 * (timeLeft / duration);
+            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+        }, 250);
+    }
+</script>
+</body>
+</html>
